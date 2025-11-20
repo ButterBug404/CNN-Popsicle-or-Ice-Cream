@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Popsicle vs Ice Cream Classifier</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .input-section {
+            margin: 20px 0;
+            width: 100%;
+        }
+        #imagePreview {
+            max-width: 300px;
+            max-height: 300px;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .result {
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .confidence {
+            margin-top: 10px;
+            font-size: 16px;
+        }
+        .loading {
+            margin: 20px 0;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="container">
+        <div class="input-section">
+            <input type="file" id="imageUpload" accept="image/*">
+            <div id="loading" class="loading" style="display:none;">Loading model...</div>
+        </div>
+        
+        <img id="imagePreview" src="#" alt="Your image will appear here">
+        
+        <button id="predictBtn" disabled>Predict</button>
+        
+        <div class="result" id="result"></div>
+        <div class="confidence" id="confidence"></div>
+    </div>
+
+    <script>
+        let model;
+        const modelURL = './model.json';
+        const imagePreview = document.getElementById('imagePreview');
+        const imageUpload = document.getElementById('imageUpload');
+        const predictBtn = document.getElementById('predictBtn');
+        const resultDiv = document.getElementById('result');
+        const confidenceDiv = document.getElementById('confidence');
+        const loadingDiv = document.getElementById('loading');
+        
+        const CLASS_NAMES = ['Ice Cream', 'Popsicle'];
+        
+        // Función para enviar datos a React Native
+        function sendToReactNative(data) {
+            if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify(data));
+            }
+        }
+        
+        // Load the model when the page loads
+        async function loadModel() {
+            loadingDiv.style.display = 'block';
+            try {
+                model = await tf.loadGraphModel(modelURL);
+                console.log('Model loaded successfully');
+                predictBtn.disabled = false;
+                loadingDiv.style.display = 'none';
+                
+                // Notificar a React Native que el modelo se cargó
+                sendToReactNative({
+                    type: 'modelLoaded',
+                    success: true
+                });
+            } catch (error) {
+                console.error('Error loading the model:', error);
+                loadingDiv.textContent = 'Error loading model. Check console for details.';
+                
+                sendToReactNative({
+                    type: 'modelLoaded',
+                    success: false,
+                    error: error.message
+                });
+            }
+        }
+        
+        // Handle image upload
+        imageUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    resultDiv.textContent = '';
+                    confidenceDiv.textContent = '';
+                    
+                    // Notificar a React Native que se seleccionó una imagen
+                    sendToReactNative({
+                        type: 'imageSelected',
+                        imageData: e.target.result
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        // Predict button click handler
+        predictBtn.addEventListener('click', async function() {
+            await performPrediction();
+        });
+        
+        // Función principal de predicción
+        async function performPrediction() {
+            if (!model) {
+                const errorMsg = 'Model is not loaded yet. Please wait.';
+                alert(errorMsg);
+                sendToReactNative({
+                    type: 'predictionError',
+                    error: errorMsg
+                });
+                return;
+            }
+            
+            if (!imagePreview.src || imagePreview.src === '#') {
+                const errorMsg = 'Please upload an image first.';
+                alert(errorMsg);
+                sendToReactNative({
+                    type: 'predictionError',
+                    error: errorMsg
+                });
+                return;
+            }
+            
+            try {
+                resultDiv.textContent = 'Processing...';
+                confidenceDiv.textContent = '';
+                
+                // Notificar inicio de predicción
+                sendToReactNative({
+                    type: 'predictionStarted'
+                });
+                
+                // Preprocess the image
+                const image = await preprocessImage(imagePreview);
+                
+                // Make prediction
+                const prediction = await model.predict(image);
+                
+                // Get the prediction results
+                const scores = await prediction.data();
+                const maxScore = Math.max(...scores);
+                const predictedClass = scores.indexOf(maxScore);
+                
+                const result = {
+                    class: CLASS_NAMES[predictedClass],
+                    confidence: maxScore,
+                    scores: Array.from(scores)
+                };
+                
+                // Display results
+                resultDiv.textContent = `Prediction: ${result.class}`;
+                confidenceDiv.textContent = `Confidence: ${(result.confidence * 100).toFixed(2)}%`;
+                
+                // Enviar resultado a React Native
+                sendToReactNative({
+                    type: 'predictionResult',
+                    result: result
+                });
+                
+                // Clean up tensors
+                prediction.dispose();
+                image.dispose();
+                
+            } catch (error) {
+                console.error('Error during prediction:', error);
+                const errorMsg = 'Error making prediction. Check console for details.';
+                resultDiv.textContent = errorMsg;
+                confidenceDiv.textContent = '';
+                
+                sendToReactNative({
+                    type: 'predictionError',
+                    error: error.message
+                });
+            }
+        }
+        
+        // Preprocess the image to match the model's input requirements
+        async function preprocessImage(imgElement) {
+            return tf.tidy(() => {
+                // Create a tensor from the image
+                let img = tf.browser.fromPixels(imgElement);
+                
+                // Resize the image to 224x224 as required by MobileNetV2
+                img = tf.image.resizeBilinear(img, [224, 224]);
+                
+                // Normalize pixel values to [0,1]
+                img = img.div(255.0);
+                
+                // Add batch dimension [1, 224, 224, 3]
+                img = img.expandDims(0);
+                
+                return img;
+            });
+        }
+        
+        // Load model when page loads
+        window.onload = loadModel;
+        
+        // Función para que React Native pueda disparar la predicción
+        window.triggerPrediction = function() {
+            performPrediction();
+        };
+    </script>
+</body>
+</html>
