@@ -1,1 +1,1 @@
-# CNN-Popsivle-or-Ice-Cream
+# CNN-Popsisle-or-Ice-Cream
