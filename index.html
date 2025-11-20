@@ -7,7 +7,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Popsicle vs Ice Cream Classifier</title>
+    <link rel="icon" type="image/x-icon" href="https://cdn-icons-png.flaticon.com/512/3250/3250484.png">
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -21,7 +23,7 @@
             background-attachment: fixed;
         }
         .header {
-            margin-bottom: 30px;
+            margin-bottom: 3px;
         }
         h1 {
             color: #333;
@@ -47,21 +49,21 @@
             display: none;
         }
         .file-upload-label {
-            background-color: #FAA378;
+            background-color: #ff915a;
             border: none;
             color: white;
             padding: 10px 20px;
             text-align: center;
             text-decoration: none;
             display: inline-block;
-            font-size: 16px;
-            margin: 10px 2px;
+            font-size: 20px;
+  
             cursor: pointer;
             border-radius: 4px;
             transition: background-color 0.3s;
         }
         .file-upload-label:hover {
-            background-color: #E76962;
+            background-color: #000000;
         }
         #imagePreview {
             max-width: 300px;
@@ -80,10 +82,13 @@
             text-align: center;
             text-decoration: none;
             display: inline-block;
-            font-size: 16px;
+            font-size: 20px;
             margin: 10px 2px;
             cursor: pointer;
             border-radius: 4px;
+        }
+        .file-upload-label:hover {
+            background-color: #000000;
         }
         .result {
             margin: 20px 0;
@@ -111,13 +116,12 @@
 
         <div class="input-section">
             <input type="file" id="imageUpload" accept="image/*">
-            <label for="imageUpload" class="file-upload-label">Choose Image</label>
+            <label for="imageUpload" class="file-upload-label">Choose Image <i class="fa-regular fa-image"></i></label>
+            <button id="predictBtn" disabled>Predict <i class="fa-solid fa-robot"></i></button>
             <div id="loading" class="loading" style="display:none;">Loading model...</div>
         </div>
         
         <img id="imagePreview" src="https://placehold.co/300x300/e0e0e0/777?text=Upload+an+Image" alt="Image preview">
-        
-        <button id="predictBtn" disabled>Predict</button>
         
         <div class="result" id="result"></div>
         <div class="confidence" id="confidence"></div>
